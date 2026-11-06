@@ -1,0 +1,97 @@
+
+@startuml
+title 校园二手交易系统 - UML组件图
+
+top to bottom direction
+skinparam componentStyle uml2
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+' ========== 表示层 ==========
+package "表示层（UI）" {
+    component "买家界面" as BuyerUI
+    component "卖家界面" as SellerUI
+    component "管理员界面" as AdminUI
+}
+
+' ========== 业务逻辑层 ==========
+package "业务逻辑层" {
+
+    component "用户与权限管理" as Auth
+    component "商品管理" as Product
+    component "商品查询" as Search
+    component "商品审核与违规处理" as Review
+    component "预约与交易管理" as Reservation
+    component "统计与日志管理" as Statistics
+
+}
+
+' ========== 数据访问层 ==========
+package "数据访问与持久化层" {
+    component "数据持久化与一致性管理" as Persistence
+}
+
+' ========== 数据存储层 ==========
+package "数据存储层" {
+    database "关系型数据库" as DB
+    component "商品图片存储" as ImageStore
+}
+
+' ========== UI与业务模块 ==========
+BuyerUI --> Auth : 注册/登录
+BuyerUI --> Search : 查询商品
+BuyerUI --> Reservation : 创建/查询/取消预约\n确认交易完成
+
+SellerUI --> Auth : 注册/登录
+SellerUI --> Product : 创建/修改/提交/下架商品
+SellerUI --> Search : 查询自己的商品
+SellerUI --> Reservation : 查询/确认/拒绝预约
+
+AdminUI --> Auth : 注册/登录
+AdminUI --> Search : 查询全站商品
+AdminUI --> Review : 审核/违规下架
+AdminUI --> Statistics : 查询统计与日志
+
+' ========== 业务模块之间的交互 ==========
+Product ..> Auth : 权限与归属校验
+Search ..> Auth : 查询权限校验
+Review ..> Auth : 管理员权限校验
+Reservation ..> Auth : 权限与联系方式校验
+Statistics ..> Auth : 管理员权限校验
+
+Product ..> Review : 提交审核
+Review ..> Product : 更新商品状态
+
+Reservation ..> Product : 检查及更新商品状态
+Review ..> Reservation : 违规下架联动关闭有效预约
+
+' ========== 持久化依赖 ==========
+Auth --> Persistence
+Product --> Persistence
+Search --> Persistence
+Review --> Persistence
+Reservation --> Persistence
+Statistics --> Persistence
+
+Persistence --> DB : 业务数据读写及事务管理
+Persistence --> ImageStore : 商品图片存取
+
+note right of Persistence
+  跨记录操作保证原子性：
+  商品、预约、审核记录
+  与成功日志一致提交。
+
+  并发预约保证同一商品
+  最多一条有效预约。
+end note
+
+note right of Review
+  违规下架时：
+  1. 校验商品最新状态
+  2. 关闭当前待审核记录（如有）
+  3. 联动关闭当前有效预约（如有）
+  4. 更新商品状态并记录日志
+end note
+
+@enduml
