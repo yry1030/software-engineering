@@ -1,0 +1,172 @@
+
+
+@startuml
+title 校园二手交易系统 - UML类图
+
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+package "用户与权限" {
+  class User {
+    - userId: String
+    - username: String
+    - passwordHash: String
+    - role: UserRole
+    - phone: String
+    - createdAt: DateTime
+    + register(): Boolean
+    + login(password: String): Boolean
+    + hasPermission(action: String): Boolean
+  }
+
+  class AdminInviteCode {
+    - codeId: String
+    - codeHash: String
+    - used: Boolean
+    - usedBy: String
+    - usedAt: DateTime
+    + consume(userId: String): Boolean
+  }
+
+  enum UserRole {
+    BUYER
+    SELLER
+    ADMIN
+  }
+}
+
+package "商品管理" {
+  class Product {
+    - productId: String
+    - sellerId: String
+    - title: String
+    - description: String
+    - price: Decimal
+    - status: ProductStatus
+    - createdAt: DateTime
+    - updatedAt: DateTime
+    + edit(): Boolean
+    + submitForReview(): Boolean
+    + takeDown(): Boolean
+  }
+
+  class ProductImage {
+    - imageId: String
+    - productId: String
+    - imageUrl: String
+    - sortOrder: Integer
+  }
+
+  enum ProductStatus {
+    DRAFT
+    PENDING_REVIEW
+    REJECTED
+    PUBLISHED
+    RESERVED
+    SELLER_CONFIRMED
+    SOLD
+    OFF_SHELF
+    VIOLATION_OFF_SHELF
+  }
+}
+
+package "商品审核" {
+  class ReviewRecord {
+    - reviewId: String
+    - productId: String
+    - reviewerId: String
+    - snapshot: String
+    - result: ReviewStatus
+    - reason: String
+    - createdAt: DateTime
+    - reviewedAt: DateTime
+    + approve(): Boolean
+    + reject(reason: String): Boolean
+  }
+
+  enum ReviewStatus {
+    PENDING
+    APPROVED
+    REJECTED
+    CLOSED
+  }
+}
+
+package "预约与交易" {
+  class Reservation {
+    - reservationId: String
+    - productId: String
+    - buyerId: String
+    - status: ReservationStatus
+    - createdAt: DateTime
+    - confirmedAt: DateTime
+    - completedAt: DateTime
+    + confirmBySeller(): Boolean
+    + rejectBySeller(): Boolean
+    + cancelByBuyer(): Boolean
+    + completeByBuyer(): Boolean
+    + closeForViolation(): Boolean
+  }
+
+  enum ReservationStatus {
+    PENDING
+    SELLER_CONFIRMED
+    SELLER_REJECTED
+    BUYER_CANCELLED
+    COMPLETED
+    VIOLATION_CLOSED
+  }
+}
+
+package "统计与日志" {
+  class OperationLog {
+    - logId: String
+    - operatorId: String
+    - action: String
+    - targetType: String
+    - targetId: String
+    - result: String
+    - createdAt: DateTime
+  }
+}
+
+' 用户关联
+User --> UserRole
+User "1" -- "0..*" Product : 发布
+User "1" -- "0..*" Reservation : 发起预约
+User "1" -- "0..*" ReviewRecord : 审核
+User "1" -- "0..*" OperationLog : 执行操作
+AdminInviteCode "0..1" --> "0..1" User : 使用者
+
+' 商品关联
+Product --> ProductStatus
+Product "1" *-- "0..*" ProductImage : 图片
+Product "1" -- "0..*" ReviewRecord : 审核历史
+Product "1" -- "0..*" Reservation : 预约历史
+
+' 状态关联
+ReviewRecord --> ReviewStatus
+Reservation --> ReservationStatus
+
+note bottom of Product
+  商品名称允许重复。
+  商品状态遵循规定的
+  九状态生命周期。
+end note
+
+note bottom of Reservation
+  每次新预约生成独立预约ID。
+  同一商品最多一条有效预约。
+  交易完成只能由买家确认。
+end note
+
+note bottom of ReviewRecord
+  每次重新提交审核，
+  都创建新的审核记录，
+  保留商品提交时的快照。
+end note
+
+@enduml

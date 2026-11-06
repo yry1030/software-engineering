@@ -1,0 +1,50 @@
+
+@startuml
+title 校园二手交易系统 - UML用例图
+
+left to right direction
+
+skinparam shadowing false
+skinparam actorStyle awesome
+skinparam linetype ortho
+skinparam nodesep 35
+skinparam ranksep 45
+
+actor "买家" as Buyer
+actor "卖家" as Seller
+actor "管理员" as Admin
+
+rectangle "校园二手交易系统" {
+
+  usecase "注册与登录" as Login
+
+  usecase "浏览与筛选商品" as Browse
+  usecase "创建与管理预约" as BuyerReservation
+  usecase "确认交易完成" as Complete
+
+  usecase "发布与管理商品" as ProductManage
+  usecase "处理买家预约" as SellerReservation
+
+  usecase "审核商品" as Review
+  usecase "违规下架" as Violation
+  usecase "查询商品与日志统计" as AdminQuery
+}
+
+' 买家
+Buyer -- Login
+Buyer -- Browse
+Buyer -- BuyerReservation
+Buyer -- Complete
+
+' 卖家
+Seller -- Login
+Seller -- ProductManage
+Seller -- SellerReservation
+
+' 管理员
+Admin -- Login
+Admin -- Review
+Admin -- Violation
+Admin -- AdminQuery
+
+@enduml

@@ -1,0 +1,66 @@
+
+@startuml
+title 校园二手交易系统 - 创建预约时序图
+
+autonumber
+
+actor "买家" as Buyer
+boundary "预约界面" as UI
+control "BusinessWorkflowService" as Workflow
+control "PermissionService" as Permission
+control "ProductService" as Product
+control "ReservationService" as Reservation
+control "TransactionManager" as Transaction
+control "OperationLogService" as Log
+
+Buyer -> UI : 选择商品并提交预约
+UI -> Workflow : createReservation(productId, buyerId)
+
+Workflow -> Permission : 校验买家权限
+Permission --> Workflow : 校验结果
+
+alt 无预约权限
+    Workflow --> UI : 返回权限错误
+
+else 有预约权限
+    Workflow -> Transaction : begin()
+    activate Transaction
+
+    Workflow -> Product : 检查商品最新状态
+    Product --> Workflow : 商品状态
+
+    Workflow -> Reservation : 检查有效预约及重复请求
+    Reservation --> Workflow : 检查结果
+
+    alt 商品不可预约或存在冲突
+        Workflow -> Transaction : rollback()
+        deactivate Transaction
+        Workflow --> UI : 返回失败或已有预约结果
+
+    else 可以创建预约
+        Workflow -> Reservation : 创建预约并保存商品快照
+        Reservation --> Workflow : 新预约记录
+
+        Workflow -> Product : changeState(RESERVED)
+        Product --> Workflow : 更新结果
+
+        Workflow -> Log : record(预约创建成功日志)
+        Log --> Workflow : 写入完成
+
+        Workflow -> Transaction : commit()
+        deactivate Transaction
+
+        Workflow --> UI : 返回预约成功及预约编号
+    end
+end
+
+UI --> Buyer : 显示预约结果
+
+note over Workflow,Transaction
+  商品状态更新、预约记录创建、
+  成功日志写入在同一事务中提交。
+  并发预约需要数据库层面的
+  锁或唯一性约束保证一致性。
+end note
+
+@enduml

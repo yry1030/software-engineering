@@ -7,66 +7,75 @@ skinparam componentStyle uml2
 skinparam shadowing false
 skinparam linetype ortho
 skinparam packageStyle rectangle
+skinparam nodesep 45
+skinparam ranksep 65
+skinparam defaultTextAlignment center
 
-' ========== 表示层 ==========
 package "表示层（UI）" {
-    component "买家界面" as BuyerUI
-    component "卖家界面" as SellerUI
-    component "管理员界面" as AdminUI
+  component "买家界面" as BuyerUI
+  component "卖家界面" as SellerUI
+  component "管理员界面" as AdminUI
+
+  BuyerUI -[hidden]right- SellerUI
+  SellerUI -[hidden]right- AdminUI
 }
 
-' ========== 业务逻辑层 ==========
 package "业务逻辑层" {
 
-    component "用户与权限管理" as Auth
-    component "商品管理" as Product
-    component "商品查询" as Search
-    component "商品审核与违规处理" as Review
-    component "预约与交易管理" as Reservation
-    component "统计与日志管理" as Statistics
+  component "用户与权限管理\n----\n注册与登录\n角色及操作权限校验\n账号与密码管理" as Auth
 
+  component "商品管理\n----\n创建与编辑商品\n提交审核、主动下架\n商品状态维护\n商品图片管理" as Product
+
+  component "商品查询\n----\n商品列表与详情\n条件筛选\n按角色控制可见范围" as Search
+
+  component "商品审核与违规处理\n----\n审核通过或驳回\n审核记录与快照\n违规下架及原因记录" as Review
+
+  component "预约与交易管理\n----\n创建与查询预约\n卖家确认或拒绝\n买家取消预约\n买家确认交易完成\n违规预约关闭" as Reservation
+
+  component "统计与日志管理\n----\n操作日志记录\n商品与交易统计\n管理员日志查询" as Statistics
+
+  Auth -[hidden]right- Product
+  Product -[hidden]right- Search
+  Review -[hidden]right- Reservation
+  Reservation -[hidden]right- Statistics
 }
 
-' ========== 数据访问层 ==========
 package "数据访问与持久化层" {
-    component "数据持久化与一致性管理" as Persistence
+  component "数据持久化与一致性管理\n----\n业务数据读写\n事务管理\n并发预约控制\n唯一性及幂等性约束" as Persistence
 }
 
-' ========== 数据存储层 ==========
 package "数据存储层" {
-    database "关系型数据库" as DB
-    component "商品图片存储" as ImageStore
+  database "关系型数据库\n用户/商品/审核/预约/日志" as DB
+  component "商品图片存储" as ImageStore
 }
 
-' ========== UI与业务模块 ==========
-BuyerUI --> Auth : 注册/登录
-BuyerUI --> Search : 查询商品
-BuyerUI --> Reservation : 创建/查询/取消预约\n确认交易完成
+' 界面与业务模块
+BuyerUI --> Auth
+BuyerUI --> Search
+BuyerUI --> Reservation
 
-SellerUI --> Auth : 注册/登录
-SellerUI --> Product : 创建/修改/提交/下架商品
-SellerUI --> Search : 查询自己的商品
-SellerUI --> Reservation : 查询/确认/拒绝预约
+SellerUI --> Auth
+SellerUI --> Product
+SellerUI --> Search
+SellerUI --> Reservation
 
-AdminUI --> Auth : 注册/登录
-AdminUI --> Search : 查询全站商品
-AdminUI --> Review : 审核/违规下架
-AdminUI --> Statistics : 查询统计与日志
+AdminUI --> Auth
+AdminUI --> Review
+AdminUI --> Search
+AdminUI --> Statistics
 
-' ========== 业务模块之间的交互 ==========
-Product ..> Auth : 权限与归属校验
-Search ..> Auth : 查询权限校验
-Review ..> Auth : 管理员权限校验
-Reservation ..> Auth : 权限与联系方式校验
-Statistics ..> Auth : 管理员权限校验
+' 业务模块间依赖
+Product ..> Auth : 权限校验
+Search ..> Auth : 查询权限
+Review ..> Auth : 管理员权限
+Reservation ..> Auth : 交易权限
+Statistics ..> Auth : 管理员权限
 
 Product ..> Review : 提交审核
-Review ..> Product : 更新商品状态
+Reservation ..> Product : 商品状态协作
+Review ..> Reservation : 违规下架联动
 
-Reservation ..> Product : 检查及更新商品状态
-Review ..> Reservation : 违规下架联动关闭有效预约
-
-' ========== 持久化依赖 ==========
+' 持久化依赖
 Auth --> Persistence
 Product --> Persistence
 Search --> Persistence
@@ -74,24 +83,23 @@ Review --> Persistence
 Reservation --> Persistence
 Statistics --> Persistence
 
-Persistence --> DB : 业务数据读写及事务管理
-Persistence --> ImageStore : 商品图片存取
-
-note right of Persistence
-  跨记录操作保证原子性：
-  商品、预约、审核记录
-  与成功日志一致提交。
-
-  并发预约保证同一商品
-  最多一条有效预约。
-end note
+Persistence --> DB
+Persistence --> ImageStore
 
 note right of Review
   违规下架时：
-  1. 校验商品最新状态
-  2. 关闭当前待审核记录（如有）
-  3. 联动关闭当前有效预约（如有）
-  4. 更新商品状态并记录日志
+  关闭当前有效预约及
+  当前待审核记录（如有），
+  保留历史记录。
+end note
+
+note right of Persistence
+  一致性要求：
+  商品、预约、审核记录
+  与成功日志原子提交。
+
+  同一商品最多存在
+  一条有效预约。
 end note
 
 @enduml
