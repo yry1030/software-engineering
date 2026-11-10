@@ -5,46 +5,121 @@ title 校园二手交易系统 - UML用例图
 left to right direction
 
 skinparam shadowing false
+skinparam linetype polyline
+skinparam packageStyle rectangle
 skinparam actorStyle awesome
-skinparam linetype ortho
-skinparam nodesep 35
-skinparam ranksep 45
+skinparam nodesep 25
+skinparam ranksep 35
+skinparam defaultTextAlignment center
+
+' ========== 参与者 ==========
 
 actor "买家" as Buyer
 actor "卖家" as Seller
 actor "管理员" as Admin
 
+' ========== 系统边界 ==========
+
 rectangle "校园二手交易系统" {
 
-  usecase "注册与登录" as Login
+  rectangle "账号与权限" as AccountGroup {
+    usecase "注册账号" as UC_Register
+    usecase "登录系统" as UC_Login
+  }
 
-  usecase "浏览与筛选商品" as Browse
-  usecase "创建与管理预约" as BuyerReservation
-  usecase "确认交易完成" as Complete
+  rectangle "商品浏览与管理" as ProductGroup {
+    usecase "浏览与筛选商品" as UC_Browse
+    usecase "创建商品草稿" as UC_Create
+    usecase "修改商品信息" as UC_Edit
+    usecase "提交商品审核" as UC_Submit
+    usecase "普通下架商品" as UC_TakeDown
+    usecase "查询自己的商品" as UC_SellerQuery
+  }
 
-  usecase "发布与管理商品" as ProductManage
-  usecase "处理买家预约" as SellerReservation
+  rectangle "预约与交易" as ReservationGroup {
+    usecase "创建购买预约" as UC_Reserve
+    usecase "查询我的预约" as UC_BuyerQuery
+    usecase "查询收到的预约" as UC_SellerReservations
+    usecase "确认预约" as UC_Confirm
+    usecase "拒绝预约" as UC_RejectReservation
+    usecase "取消预约" as UC_Cancel
+    usecase "确认交易完成" as UC_Complete
+    usecase "查看交易联系方式" as UC_Contact
+  }
 
-  usecase "审核商品" as Review
-  usecase "违规下架" as Violation
-  usecase "查询商品与日志统计" as AdminQuery
+  rectangle "审核与违规处理" as ReviewGroup {
+    usecase "查询待审核商品" as UC_Pending
+    usecase "审核通过" as UC_Approve
+    usecase "审核驳回" as UC_RejectReview
+    usecase "违规下架商品" as UC_Violation
+    usecase "查询全部商品" as UC_AdminQuery
+  }
+
+  rectangle "统计与日志" as LogGroup {
+    usecase "查看业务统计" as UC_Statistics
+    usecase "查询操作日志" as UC_Logs
+  }
+
+  ' 引导模块采用较紧凑的排列
+  AccountGroup -[hidden]right- ProductGroup
+  ProductGroup -[hidden]right- ReservationGroup
+  ReviewGroup -[hidden]right- LogGroup
+  AccountGroup -[hidden]down- ReviewGroup
+  ProductGroup -[hidden]down- LogGroup
 }
 
-' 买家
-Buyer -- Login
-Buyer -- Browse
-Buyer -- BuyerReservation
-Buyer -- Complete
+' ========== 买家功能 ==========
 
-' 卖家
-Seller -- Login
-Seller -- ProductManage
-Seller -- SellerReservation
+Buyer -- UC_Register
+Buyer -- UC_Login
+Buyer -- UC_Browse
+Buyer -- UC_Reserve
+Buyer -- UC_BuyerQuery
+Buyer -- UC_Cancel
+Buyer -- UC_Complete
+Buyer -- UC_Contact
 
-' 管理员
-Admin -- Login
-Admin -- Review
-Admin -- Violation
-Admin -- AdminQuery
+' ========== 卖家功能 ==========
+
+Seller -- UC_Register
+Seller -- UC_Login
+Seller -- UC_Create
+Seller -- UC_Edit
+Seller -- UC_Submit
+Seller -- UC_TakeDown
+Seller -- UC_SellerQuery
+Seller -- UC_SellerReservations
+Seller -- UC_Confirm
+Seller -- UC_RejectReservation
+Seller -- UC_Contact
+
+' ========== 管理员功能 ==========
+
+Admin -- UC_Register
+Admin -- UC_Login
+Admin -- UC_Pending
+Admin -- UC_Approve
+Admin -- UC_RejectReview
+Admin -- UC_Violation
+Admin -- UC_AdminQuery
+Admin -- UC_Statistics
+Admin -- UC_Logs
+
+' ========== 角色布局 ==========
+
+Buyer -[hidden]down- Seller
+Seller -[hidden]down- Admin
+
+' ========== 关键业务约束 ==========
+
+note right of UC_Register
+  管理员注册需使用
+  一次性邀请码。
+end note
+
+note right of UC_Contact
+  仅已确认预约的买卖双方
+  可以查看联系方式。
+end note
 
 @enduml
